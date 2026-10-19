@@ -11,7 +11,7 @@ from telethon.errors import RPCError
 # --- CONFIGURACIÓN DE TELEGRAM ---
 API_ID = 33606964
 API_HASH = "756fd02aae2deb1ee44148eb390d293"
-TOKEN_BOT = "TU_TOKEN_DE_BOTFATHER"         # Reemplaza esto con el token de @BotFather
+TOKEN_BOT = "8748626086:AAEYNzpyBNbE_KqdQWXS-IRav0ijkMGAZTs"  # Tu token oficial de BotFather
 ADMIN_CHAT_ID = 6235877284                 # Tu ID numérico privado para alertas
 
 CANAL_ID = "@Comic_series"                  # Tu canal de Telegram
