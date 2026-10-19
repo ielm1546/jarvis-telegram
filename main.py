@@ -8,7 +8,7 @@ from flask import Flask
 from telethon import TelegramClient
 from telethon.errors import RPCError
 
-# --- CONFIGURACIÓN DE TELEGRAM (Credenciales Oficiales Android + Tu Bot) ---
+# --- CONFIGURACIÓN DE TELEGRAM ---
 API_ID = 6
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
 TOKEN_BOT = "8748626086:AAEYNzpyBNbE_KqdQWXS-IRav0ijkMGAZTs"  # Tu token oficial de BotFather
@@ -83,10 +83,11 @@ async def revisar_todo_el_canal():
 
 def bucle_infinito():
     """Ejecuta el escaneo de todo el canal continuamente cada 6 horas."""
+    # Arrancamos el bot de forma sincrónica directa
+    client.start(bot_token=TOKEN_BOT)
+    
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
-    loop.run_until_complete(client.start(bot_token=TOKEN_BOT))
     
     while True:
         try:
