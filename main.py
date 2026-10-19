@@ -9,13 +9,12 @@ from telethon import TelegramClient
 from telethon.errors import RPCError
 
 # --- CONFIGURACIÓN DE TELEGRAM ---
-# Consigue tu API_ID y API_HASH gratis en https://my.telegram.org (en la sección API Development Tools)
-API_ID = 12345678                          # Reemplaza por tu API ID
-API_HASH = "TU_API_HASH_AQUI"              # Reemplaza por tu API Hash
-TOKEN_BOT = "TU_TOKEN_DE_BOTFATHER"         # Token de @BotFather
+API_ID = 33606964
+API_HASH = "756fd02aae2deb1ee44148eb390d293"
+TOKEN_BOT = "TU_TOKEN_DE_BOTFATHER"         # Reemplaza esto con el token de @BotFather
+ADMIN_CHAT_ID = 6235877284                 # Tu ID numérico privado para alertas
 
-CANAL_ID = "@Comic_series"                  # Usuario de tu canal
-ADMIN_CHAT_ID = TU_ID_NUMERICO             # Tu ID numérico privado para alertas
+CANAL_ID = "@Comic_series"                  # Tu canal de Telegram
 
 # Expresión regular para detectar enlaces HTTP/HTTPS en los mensajes
 URL_REGEX = r'https?://[^\s]+'
@@ -38,13 +37,11 @@ async def revisar_todo_el_canal():
     """Recorre TODOS los mensajes publicados en la historia del canal."""
     print("🤖 Jarvis: Iniciando escaneo completo del historial del canal...")
     
-    # iter_messages sin límite recorre el canal de principio a fin
     async for message in client.iter_messages(CANAL_ID):
         texto = message.text or message.caption
         if not texto:
             continue
 
-        # Extraer todas las URLs del mensaje
         enlaces = re.findall(URL_REGEX, texto)
         if not enlaces:
             continue
@@ -53,7 +50,6 @@ async def revisar_todo_el_canal():
         nuevo_texto = texto
 
         for url in enlaces:
-            # Ignorar enlaces internos de Telegram (ej. t.me/...)
             if "t.me/" in url or "telegram.me/" in url:
                 continue
 
@@ -62,7 +58,6 @@ async def revisar_todo_el_canal():
             if not verificar_enlace(url):
                 print(f"⚠️ ¡ENLACE CAÍDO DETECTADO en mensaje {message.id}!")
                 
-                # 1. Enviar aviso privado al administrador
                 try:
                     await client.send_message(
                         ADMIN_CHAT_ID,
@@ -71,15 +66,12 @@ async def revisar_todo_el_canal():
                 except Exception as e:
                     print(f"Error enviando alerta privada: {e}")
 
-                # 2. Marcar/tachar el enlace caído en el texto del mensaje
                 if url in nuevo_texto and not f"~~{url}~~" in nuevo_texto:
                     nuevo_texto = nuevo_texto.replace(url, f"~~{url}~~ ❌ (Caído)")
                     hubo_cambio = True
 
-            # Pequeña pausa para evitar bloqueos del servidor
             await asyncio.sleep(1)
 
-        # Si detectamos un enlace caído en el mensaje, editamos la publicación en el canal
         if hubo_cambio:
             try:
                 await client.edit_message(CANAL_ID, message.id, nuevo_texto)
@@ -94,7 +86,6 @@ def bucle_infinito():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
-    # Iniciar cliente con el Token del Bot
     loop.run_until_complete(client.start(bot_token=TOKEN_BOT))
     
     while True:
@@ -114,10 +105,8 @@ def home():
     return "Jarvis Bot está activo escaneando todo el canal 24/7."
 
 if __name__ == "__main__":
-    # Arrancar el monitoreo continuo en segundo plano
     hilo = threading.Thread(target=bucle_infinito)
     hilo.daemon = True
     hilo.start()
 
-    # Servidor Flask para Render
     app.run(host="0.0.0.0", port=10000)
