@@ -94,7 +94,8 @@ async def revisar_todo_el_canal():
                     print(f"Error enviando alerta privada: {e}", flush=True)
 
                 if url in nuevo_texto and not f"~~{url}~~" in nuevo_texto:
-                    nuevo_texto = nuevo_texto.replace(url, f"~~{url}~~ ❌ (Caído)")
+                    # Nuevo formato visual con círculo rojo para el canal
+                    nuevo_texto = nuevo_texto.replace(url, f"~~{url}~~ 🔴 [Caído]")
                     hubo_cambio = True
 
             await asyncio.sleep(1)
