@@ -6,19 +6,21 @@ import threading
 import requests
 from flask import Flask
 from telethon import TelegramClient
+from telethon.sessions import StringSession
 from telethon.errors import RPCError
 
 # --- CONFIGURACIÓN DE TELEGRAM (USERBOT) ---
-API_ID = 6
-API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
+API_ID = 33606964
+API_HASH = "756fd02aae2deb1ee44148ebf390d293"
+SESSION_STRING = os.environ.get("SESSION_STRING")
 ADMIN_CHAT_ID = 6235877284            # Tu ID numérico privado para alertas
 CANAL_ID = "comics2035"               # Alias exacto del canal (t.me/comics2035)
 
 # Expresión regular para detectar enlaces HTTP/HTTPS
 URL_REGEX = r'https?://[^\s]+'
 
-# Cliente de Telethon usando tu sesión de usuario personal
-client = TelegramClient('sesion_jarvis', API_ID, API_HASH)
+# Cliente de Telethon usando la StringSession de la nube
+client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
 
 def verificar_enlace(url):
     """Comprueba si un enlace está activo. Detecta códigos HTTP y pantallas de error 404 genéricas."""
@@ -105,13 +107,16 @@ async def revisar_todo_el_canal():
     print(f"✅ Escaneo completo finalizado. Total de enlaces analizados: {contador_revisados}.", flush=True)
 
 async def iniciar_bot_y_bucle():
-    print("Conectando UserBot con Telegram...", flush=True)
-    # Al no pasar bot_token, Telethon usará tu sesión personal
+    if not SESSION_STRING:
+        print("❌ Error crítico: La variable de entorno SESSION_STRING no está configurada en Render.", flush=True)
+        return
+
+    print("Conectando UserBot con Telegram mediante StringSession...", flush=True)
     await client.start()
     print("¡Conexión exitosa con Telegram!", flush=True)
     
     try:
-        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis (UserBot) activo:** Conectado correctamente y comenzó el monitoreo.")
+        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis (UserBot) activo:** Conectado correctamente mediante StringSession y comenzó el monitoreo.")
     except Exception:
         pass
 
