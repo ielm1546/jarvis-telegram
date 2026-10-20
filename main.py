@@ -22,23 +22,35 @@ URL_REGEX = r'https?://[^\s]+'
 client = TelegramClient('sesion_jarvis', API_ID, API_HASH)
 
 def verificar_enlace(url):
-    """Comprueba si un enlace está activo. Maneja acortadores que devuelven 200 pero están caídos."""
+    """Comprueba si un enlace está activo. Detecta códigos HTTP y pantallas de error 404 genéricas."""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
-        respuesta = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
+        # Timeout optimizado a 7 segundos para agilizar la revisión masiva
+        respuesta = requests.get(url, headers=headers, timeout=7, allow_redirects=True)
         
         # Si da error HTTP directo (404, 500, etc.)
         if respuesta.status_code >= 400:
             return False
             
-        # Si es un acortador (como ShrinkEarn) o servicio, a veces responde 200 pero muestra texto de error
+        # Analizar el contenido HTML para detectar la pantalla de error genérica del acortador
         cuerpo_html = respuesta.text.lower()
-        palabras_error = ["link not found", "file deleted", "enlace no encontrado", "archivo borrado", "page not found", "expired", "removed"]
+        palabras_error = [
+            "404 no encontrado", 
+            "no se encontró en este servidor", 
+            "link not found", 
+            "file deleted", 
+            "enlace no encontrado", 
+            "archivo borrado", 
+            "page not found", 
+            "expired", 
+            "removed"
+        ]
+        
         for palabra in palabras_error:
             if palabra in cuerpo_html:
-                print(f"-> Detectado texto de error en la página para: {url}", flush=True)
+                print(f"-> Detectado enlace caído por texto en la página: {url}", flush=True)
                 return False
 
         return True
