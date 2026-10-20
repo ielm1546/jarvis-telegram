@@ -62,7 +62,8 @@ async def revisar_todo_el_canal():
     
     contador_revisados = 0
     async for message in client.iter_messages(CANAL_ID):
-        texto = message.text or message.caption
+        # Usamos message.text de forma segura
+        texto = message.text
         if not texto:
             continue
 
