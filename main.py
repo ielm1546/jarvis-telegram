@@ -8,17 +8,16 @@ from flask import Flask
 from telethon import TelegramClient
 from telethon.errors import RPCError
 
-# --- CONFIGURACIÓN DE TELEGRAM ---
+# --- CONFIGURACIÓN DE TELEGRAM (USERBOT) ---
 API_ID = 6
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
-TOKEN_BOT = os.environ.get("TOKEN_BOT")
 ADMIN_CHAT_ID = 6235877284            # Tu ID numérico privado para alertas
-CANAL_ID = "comics2035"               # Alias exacto del canal según Telegram (t.me/comics2035)
+CANAL_ID = "comics2035"               # Alias exacto del canal (t.me/comics2035)
 
 # Expresión regular para detectar enlaces HTTP/HTTPS
 URL_REGEX = r'https?://[^\s]+'
 
-# Cliente de Telethon
+# Cliente de Telethon usando tu sesión de usuario personal
 client = TelegramClient('sesion_jarvis', API_ID, API_HASH)
 
 def verificar_enlace(url):
@@ -27,14 +26,11 @@ def verificar_enlace(url):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
-        # Timeout optimizado a 7 segundos para agilizar la revisión masiva
         respuesta = requests.get(url, headers=headers, timeout=7, allow_redirects=True)
         
-        # Si da error HTTP directo (404, 500, etc.)
         if respuesta.status_code >= 400:
             return False
             
-        # Analizar el contenido HTML para detectar la pantalla de error genérica del acortador
         cuerpo_html = respuesta.text.lower()
         palabras_error = [
             "404 no encontrado", 
@@ -59,8 +55,8 @@ def verificar_enlace(url):
         return False
 
 async def revisar_todo_el_canal():
-    """Recorre TODOS los mensajes publicados en la historia del canal."""
-    print("🤖 Jarvis: Iniciando escaneo completo del historial del canal...", flush=True)
+    """Recorre TODOS los mensajes publicados en la historia del canal usando tu UserBot."""
+    print("🤖 Jarvis (UserBot): Iniciando escaneo completo del historial del canal...", flush=True)
     
     contador_revisados = 0
     async for message in client.iter_messages(CANAL_ID):
@@ -94,7 +90,6 @@ async def revisar_todo_el_canal():
                     print(f"Error enviando alerta privada: {e}", flush=True)
 
                 if url in nuevo_texto and not f"~~{url}~~" in nuevo_texto:
-                    # Nuevo formato visual con círculo rojo para el canal
                     nuevo_texto = nuevo_texto.replace(url, f"~~{url}~~ 🔴 [Caído]")
                     hubo_cambio = True
 
@@ -110,16 +105,13 @@ async def revisar_todo_el_canal():
     print(f"✅ Escaneo completo finalizado. Total de enlaces analizados: {contador_revisados}.", flush=True)
 
 async def iniciar_bot_y_bucle():
-    if not TOKEN_BOT:
-        print("❌ Error crítico: La variable de entorno TOKEN_BOT no está configurada en Render.", flush=True)
-        return
-
-    print("Conectando con Telegram...", flush=True)
-    await client.start(bot_token=TOKEN_BOT)
+    print("Conectando UserBot con Telegram...", flush=True)
+    # Al no pasar bot_token, Telethon usará tu sesión personal
+    await client.start()
     print("¡Conexión exitosa con Telegram!", flush=True)
     
     try:
-        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis activo:** El bot se ha conectado y comenzó el monitoreo.")
+        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis (UserBot) activo:** Conectado correctamente y comenzó el monitoreo.")
     except Exception:
         pass
 
@@ -142,7 +134,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Jarvis Bot está activo escaneando todo el canal 24/7."
+    return "Jarvis UserBot está activo escaneando todo el canal 24/7."
 
 if __name__ == "__main__":
     hilo = threading.Thread(target=bucle_infinito)
