@@ -11,33 +11,46 @@ from telethon.errors import RPCError
 # --- CONFIGURACIÓN DE TELEGRAM ---
 API_ID = 6
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
-# Ahora el token se lee de forma segura desde las variables de entorno de Render
 TOKEN_BOT = os.environ.get("TOKEN_BOT")
-ADMIN_CHAT_ID = 6235877284                 # Tu ID numérico privado para alertas
+ADMIN_CHAT_ID = 6235877284            # Tu ID numérico privado para alertas
+CANAL_ID = "@Comic_series"              # Tu canal de Telegram
 
-CANAL_ID = "@Comic_series"                  # Tu canal de Telegram
-
-# Expresión regular para detectar enlaces HTTP/HTTPS en los mensajes
+# Expresión regular para detectar enlaces HTTP/HTTPS
 URL_REGEX = r'https?://[^\s]+'
 
-# Cliente de Telethon con sesión guardada
+# Cliente de Telethon
 client = TelegramClient('sesion_jarvis', API_ID, API_HASH)
 
 def verificar_enlace(url):
-    """Comprueba si un enlace está activo y responde con código HTTP 200-299."""
+    """Comprueba si un enlace está activo. Maneja acortadores que devuelven 200 pero están caídos."""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         respuesta = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
-        return 200 <= respuesta.status_code < 300
-    except requests.RequestException:
+        
+        # Si da error HTTP directo (404, 500, etc.)
+        if respuesta.status_code >= 400:
+            return False
+            
+        # Si es un acortador (como ShrinkEarn) o servicio, a veces responde 200 pero muestra texto de error
+        cuerpo_html = respuesta.text.lower()
+        palabras_error = ["link not found", "file deleted", "enlace no encontrado", "archivo borrado", "page not found", "expired", "removed"]
+        for palabra in palabras_error:
+            if palabra in cuerpo_html:
+                print(f"-> Detectado texto de error en la página para: {url}", flush=True)
+                return False
+
+        return True
+    except requests.RequestException as e:
+        print(f"Excepción de red al verificar {url}: {e}", flush=True)
         return False
 
 async def revisar_todo_el_canal():
     """Recorre TODOS los mensajes publicados en la historia del canal."""
-    print("🤖 Jarvis: Iniciando escaneo completo del historial del canal...")
+    print("🤖 Jarvis: Iniciando escaneo completo del historial del canal...", flush=True)
     
+    contador_revisados = 0
     async for message in client.iter_messages(CANAL_ID):
         texto = message.text or message.caption
         if not texto:
@@ -54,10 +67,11 @@ async def revisar_todo_el_canal():
             if "t.me/" in url or "telegram.me/" in url:
                 continue
 
-            print(f"Verificando [Mensaje ID {message.id}]: {url}")
+            contador_revisados += 1
+            print(f"Verificando [Mensaje ID {message.id}]: {url}", flush=True)
 
             if not verificar_enlace(url):
-                print(f"⚠️ ¡ENLACE CAÍDO DETECTADO en mensaje {message.id}!")
+                print(f"⚠️ ¡ENLACE CAÍDO DETECTADO en mensaje {message.id}!", flush=True)
                 
                 try:
                     await client.send_message(
@@ -65,7 +79,7 @@ async def revisar_todo_el_canal():
                         f"🚨 **ALERTA JARVIS**\n\nEnlace caído en el mensaje **#{message.id}**:\n`{url}`"
                     )
                 except Exception as e:
-                    print(f"Error enviando alerta privada: {e}")
+                    print(f"Error enviando alerta privada: {e}", flush=True)
 
                 if url in nuevo_texto and not f"~~{url}~~" in nuevo_texto:
                     nuevo_texto = nuevo_texto.replace(url, f"~~{url}~~ ❌ (Caído)")
@@ -76,31 +90,39 @@ async def revisar_todo_el_canal():
         if hubo_cambio:
             try:
                 await client.edit_message(CANAL_ID, message.id, nuevo_texto)
-                print(f"✅ Mensaje #{message.id} actualizado con la marca de caído.")
+                print(f"✅ Mensaje #{message.id} actualizado con la marca de caído.", flush=True)
             except RPCError as e:
-                print(f"Error al editar mensaje #{message.id}: {e}")
+                print(f"Error al editar mensaje #{message.id}: {e}", flush=True)
 
-    print("✅ Escaneo completo finalizado.")
+    print(f"✅ Escaneo completo finalizado. Total de enlaces analizados: {contador_revisados}.", flush=True)
 
-def bucle_infinito():
-    """Ejecuta el escaneo de todo el canal continuamente cada 6 horas."""
+async def iniciar_bot_y_bucle():
     if not TOKEN_BOT:
-        print("❌ Error crítico: La variable de entorno TOKEN_BOT no está configurada en Render.")
+        print("❌ Error crítico: La variable de entorno TOKEN_BOT no está configurada en Render.", flush=True)
         return
 
-    client.start(bot_token=TOKEN_BOT)
+    print("Conectando con Telegram...", flush=True)
+    await client.start(bot_token=TOKEN_BOT)
+    print("¡Conexión exitosa con Telegram!", flush=True)
     
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    
+    try:
+        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis activo:** El bot se ha conectado y comenzó el monitoreo.")
+    except Exception:
+        pass
+
     while True:
         try:
-            loop.run_until_complete(revisar_todo_el_canal())
+            await revisar_todo_el_canal()
         except Exception as e:
-            print(f"Error en la ronda de revisión: {e}")
+            print(f"Error en la ronda de revisión: {e}", flush=True)
 
-        print("⏳ Esperando 6 horas para volver a escanear todo el canal...")
-        time.sleep(21600)
+        print("⏳ Esperando 6 horas para volver a escanear todo el canal...", flush=True)
+        await asyncio.sleep(21600)
+
+def bucle_infinito():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(iniciar_bot_y_bucle())
 
 # --- SERVIDOR WEB PARA RENDER (Evita suspensión 24/7) ---
 app = Flask(__name__)
@@ -114,4 +136,5 @@ if __name__ == "__main__":
     hilo.daemon = True
     hilo.start()
 
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
