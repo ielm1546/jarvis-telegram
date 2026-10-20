@@ -11,7 +11,8 @@ from telethon.errors import RPCError
 # --- CONFIGURACIÓN DE TELEGRAM ---
 API_ID = 6
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
-TOKEN_BOT = "8748626086:AAEYNzpyBNbE_KqdQWXS-IRav0ijkMGAZTs"  # Tu token oficial de BotFather
+# Ahora el token se lee de forma segura desde las variables de entorno de Render
+TOKEN_BOT = os.environ.get("TOKEN_BOT")
 ADMIN_CHAT_ID = 6235877284                 # Tu ID numérico privado para alertas
 
 CANAL_ID = "@Comic_series"                  # Tu canal de Telegram
@@ -83,7 +84,10 @@ async def revisar_todo_el_canal():
 
 def bucle_infinito():
     """Ejecuta el escaneo de todo el canal continuamente cada 6 horas."""
-    # Arrancamos el bot de forma sincrónica directa
+    if not TOKEN_BOT:
+        print("❌ Error crítico: La variable de entorno TOKEN_BOT no está configurada en Render.")
+        return
+
     client.start(bot_token=TOKEN_BOT)
     
     loop = asyncio.new_event_loop()
