@@ -13,7 +13,7 @@ API_ID = 6
 API_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e"
 TOKEN_BOT = os.environ.get("TOKEN_BOT")
 ADMIN_CHAT_ID = 6235877284            # Tu ID numérico privado para alertas
-CANAL_ID = "@Comic_series"              # Tu canal de Telegram
+CANAL_ID = "comics2035"               # Alias exacto del canal según Telegram (t.me/comics2035)
 
 # Expresión regular para detectar enlaces HTTP/HTTPS
 URL_REGEX = r'https?://[^\s]+'
