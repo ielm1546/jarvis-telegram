@@ -78,6 +78,11 @@ async def revisar_todo_el_canal():
             if "t.me/" in url or "telegram.me/" in url:
                 continue
 
+            # VALIDACIÓN: Si el enlace ya está tachado, lo saltamos para evitar multi-taches y spam
+            marcador_caido = f"~~{url}~~"
+            if marcador_caido in nuevo_texto:
+                continue
+
             contador_revisados += 1
             print(f"Verificando [Mensaje ID {message.id}]: {url}", flush=True)
 
@@ -92,7 +97,7 @@ async def revisar_todo_el_canal():
                 except Exception as e:
                     print(f"Error enviando alerta privada: {e}", flush=True)
 
-                if url in nuevo_texto and not f"~~{url}~~" in nuevo_texto:
+                if url in nuevo_texto and not marcador_caido in nuevo_texto:
                     nuevo_texto = nuevo_texto.replace(url, f"~~{url}~~ 🔴 [Caído]")
                     hubo_cambio = True
 
@@ -117,7 +122,7 @@ async def iniciar_bot_y_bucle():
     print("¡Conexión exitosa con Telegram!", flush=True)
     
     try:
-        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis (UserBot) activo:** Conectado correctamente mediante StringSession y comenzó el monitoreo.")
+        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis (UserBot) activo:** Conectado mediante StringSession, intervalo de 1 hora configurado y monitoreo iniciado.")
     except Exception:
         pass
 
@@ -127,8 +132,8 @@ async def iniciar_bot_y_bucle():
         except Exception as e:
             print(f"Error en la ronda de revisión: {e}", flush=True)
 
-        print("⏳ Esperando 6 horas para volver a escanear todo el canal...", flush=True)
-        await asyncio.sleep(21600)
+        print("⏳ Esperando 1 hora para volver a escanear todo el canal...", flush=True)
+        await asyncio.sleep(3600)  # Intervalo ajustado a 1 hora (3600 segundos)
 
 def bucle_infinito():
     loop = asyncio.new_event_loop()
@@ -140,7 +145,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Jarvis UserBot está activo escaneando todo el canal 24/7."
+    return "Jarvis UserBot está activo escaneando todo el canal 24/7 con intervalo de 1 hora."
 
 if __name__ == "__main__":
     hilo = threading.Thread(target=bucle_infinito)
