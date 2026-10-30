@@ -73,6 +73,15 @@ async def revisar_todo_el_canal():
         hubo_cambio = False
         nuevo_texto = texto
 
+        # Extraer el título del post (asumiendo que está en la primera línea o envuelto en etiquetas HTML)
+        lineas_msg = [l.strip() for l in texto.split('\n') if l.strip()]
+        titulo_post = "Título no identificado"
+        if lineas_msg:
+            # Limpiamos etiquetas HTML básicas si las trae el título
+            titulo_limpio = re.sub(r'<[^>]+>', '', lineas_msg[0])
+            if titulo_limpio:
+                titulo_post = titulo_limpio
+
         # 1. FASE DE LIMPIEZA: Normalizar tachos múltiples previos en el mensaje
         for url in enlaces:
             if "t.me/" in url or "telegram.me/" in url:
@@ -94,15 +103,18 @@ async def revisar_todo_el_canal():
                 continue
 
             contador_revisados += 1
-            print(f"Verificando [Mensaje ID {message.id}]: {url}", flush=True)
+            print(f"Verificando [{titulo_post}] (ID {message.id}): {url}", flush=True)
 
             if not verificar_enlace(url):
-                print(f"⚠️ ¡ENLACE CAÍDO DETECTADO en mensaje {message.id}!", flush=True)
+                print(f"⚠️ ¡ENLACE CAÍDO DETECTADO en '{titulo_post}' (ID {message.id})!", flush=True)
                 
                 try:
                     await client.send_message(
                         ADMIN_CHAT_ID,
-                        f"🚨 **ALERTA JARVIS**\n\nEnlace caído en el mensaje **#{message.id}**:\n`{url}`"
+                        f"🚨 **ALERTA JARVIS**\n\n"
+                        f"🎬 **Título:** {titulo_post}\n"
+                        f"🆔 **Mensaje ID:** `#{message.id}`\n"
+                        f"🔗 **Enlace caído:**\n`{url}`"
                     )
                 except Exception as e:
                     print(f"Error enviando alerta privada: {e}", flush=True)
@@ -117,7 +129,7 @@ async def revisar_todo_el_canal():
         if hubo_cambio:
             try:
                 await client.edit_message(CANAL_ID, message.id, nuevo_texto)
-                print(f"✨ Mensaje #{message.id} limpiado y actualizado correctamente.", flush=True)
+                print(f"✨ Mensaje #{message.id} ({titulo_post}) limpiado y actualizado correctamente.", flush=True)
             except RPCError as e:
                 print(f"Error al editar mensaje #{message.id}: {e}", flush=True)
 
@@ -133,7 +145,7 @@ async def iniciar_bot_y_bucle():
     print("¡Conexión exitosa con Telegram!", flush=True)
     
     try:
-        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis (UserBot) activo:** Conectado, sistema de limpieza anti-paintball activado e intervalo de 1 hora configurado.")
+        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis (UserBot) activo:** Conectado, sistema de limpieza y alertas con nombres de títulos configurado.")
     except Exception:
         pass
 
@@ -156,7 +168,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Jarvis UserBot activo con autolimpieza de enlaces y ciclo de 1 hora."
+    return "Jarvis UserBot activo con extracción de títulos en alertas y ciclo de 1 hora."
 
 if __name__ == "__main__":
     hilo = threading.Thread(target=bucle_infinito)
