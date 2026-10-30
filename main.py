@@ -57,12 +57,11 @@ def verificar_enlace(url):
         return False
 
 async def revisar_todo_el_canal():
-    """Recorre TODOS los mensajes publicados en la historia del canal usando tu UserBot."""
-    print("🤖 Jarvis (UserBot): Iniciando escaneo completo del historial del canal...", flush=True)
+    """Recorre TODOS los mensajes, limpia excesos de tachos acumulados y verifica estados."""
+    print("🤖 Jarvis (UserBot): Iniciando escaneo y limpieza en el canal...", flush=True)
     
     contador_revisados = 0
     async for message in client.iter_messages(CANAL_ID):
-        # Usamos message.text de forma segura
         texto = message.text
         if not texto:
             continue
@@ -74,13 +73,25 @@ async def revisar_todo_el_canal():
         hubo_cambio = False
         nuevo_texto = texto
 
+        # 1. FASE DE LIMPIEZA: Normalizar tachos múltiples previos en el mensaje
         for url in enlaces:
             if "t.me/" in url or "telegram.me/" in url:
                 continue
 
-            # VALIDACIÓN: Si el enlace ya está tachado, lo saltamos para evitar multi-taches y spam
-            marcador_caido = f"~~{url}~~"
-            if marcador_caido in nuevo_texto:
+            # Limpiamos rastros duplicados o cadenas deformadas de [Caído]
+            limpio_de_taches = nuevo_texto.replace(f"~~{url}~~", url)
+            limpio_de_etiquetas = limpio_de_taches.replace(" 🔴 [Caído]", "").replace("🔴 [Caído]", "")
+            
+            if limpio_de_etiquetas != nuevo_texto:
+                nuevo_texto = limpio_de_etiquetas
+                hubo_cambio = True
+
+        # 2. FASE DE VERIFICACIÓN Y MARCADO ÚNICO
+        # Recalculamos enlaces limpios tras la normalización
+        enlaces_limpios = re.findall(URL_REGEX, nuevo_texto)
+        
+        for url in enlaces_limpios:
+            if "t.me/" in url or "telegram.me/" in url:
                 continue
 
             contador_revisados += 1
@@ -97,8 +108,9 @@ async def revisar_todo_el_canal():
                 except Exception as e:
                     print(f"Error enviando alerta privada: {e}", flush=True)
 
-                if url in nuevo_texto and not marcador_caido in nuevo_texto:
-                    nuevo_texto = nuevo_texto.replace(url, f"~~{url}~~ 🔴 [Caído]")
+                marcador_caido = f"~~{url}~~ 🔴 [Caído]"
+                if marcador_caido not in nuevo_texto:
+                    nuevo_texto = nuevo_texto.replace(url, marcador_caido)
                     hubo_cambio = True
 
             await asyncio.sleep(1)
@@ -106,11 +118,11 @@ async def revisar_todo_el_canal():
         if hubo_cambio:
             try:
                 await client.edit_message(CANAL_ID, message.id, nuevo_texto)
-                print(f"✅ Mensaje #{message.id} actualizado con la marca de caído.", flush=True)
+                print(f"✨ Mensaje #{message.id} limpiado y actualizado correctamente.", flush=True)
             except RPCError as e:
                 print(f"Error al editar mensaje #{message.id}: {e}", flush=True)
 
-    print(f"✅ Escaneo completo finalizado. Total de enlaces analizados: {contador_revisados}.", flush=True)
+    print(f"✅ Escaneo y limpieza completa finalizados. Total analizados: {contador_revisados}.", flush=True)
 
 async def iniciar_bot_y_bucle():
     if not SESSION_STRING:
@@ -122,7 +134,7 @@ async def iniciar_bot_y_bucle():
     print("¡Conexión exitosa con Telegram!", flush=True)
     
     try:
-        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis (UserBot) activo:** Conectado mediante StringSession, intervalo de 1 hora configurado y monitoreo iniciado.")
+        await client.send_message(ADMIN_CHAT_ID, "🤖 **Jarvis (UserBot) activo:** Conectado, sistema de limpieza anti-paintball activado e intervalo de 1 hora configurado.")
     except Exception:
         pass
 
@@ -132,8 +144,8 @@ async def iniciar_bot_y_bucle():
         except Exception as e:
             print(f"Error en la ronda de revisión: {e}", flush=True)
 
-        print("⏳ Esperando 1 hora para volver a escanear todo el canal...", flush=True)
-        await asyncio.sleep(3600)  # Intervalo ajustado a 1 hora (3600 segundos)
+        print("⏳ Esperando 1 hora para el siguiente ciclo de revisión...", flush=True)
+        await asyncio.sleep(3600)  # Intervalo de 1 hora (3600 segundos)
 
 def bucle_infinito():
     loop = asyncio.new_event_loop()
@@ -145,7 +157,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Jarvis UserBot está activo escaneando todo el canal 24/7 con intervalo de 1 hora."
+    return "Jarvis UserBot activo con autolimpieza de enlaces y ciclo de 1 hora."
 
 if __name__ == "__main__":
     hilo = threading.Thread(target=bucle_infinito)
