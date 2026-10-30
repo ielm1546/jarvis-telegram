@@ -14,7 +14,7 @@ API_ID = 33606964
 API_HASH = "756fd02aae2deb1ee44148ebf390d293"
 SESSION_STRING = os.environ.get("SESSION_STRING")
 ADMIN_CHAT_ID = 6235877284            # Tu ID numérico privado para alertas
-CANAL_ID = "comics2035"               # Alias exacto del canal (t.me/comics2035)
+CANAL_ID = "@comics2035"              # Canal oficial de destino
 
 # Expresión regular para detectar enlaces HTTP/HTTPS
 URL_REGEX = r'https?://[^\s]+'
@@ -23,7 +23,7 @@ URL_REGEX = r'https?://[^\s]+'
 client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
 
 def verificar_enlace(url):
-    """Comprueba si un enlace está activo. Detecta códigos HTTP y pantallas de error 404 genéricas."""
+    """Comprueba si un enlace está activo. Detecta códigos HTTP y pantallas de error genéricas."""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -87,7 +87,6 @@ async def revisar_todo_el_canal():
                 hubo_cambio = True
 
         # 2. FASE DE VERIFICACIÓN Y MARCADO ÚNICO
-        # Recalculamos enlaces limpios tras la normalización
         enlaces_limpios = re.findall(URL_REGEX, nuevo_texto)
         
         for url in enlaces_limpios:
